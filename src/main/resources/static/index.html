@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Platypass AI Gateway</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        select, textarea, input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background-color: #f8d7da;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+        .status {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: #666;
+        }
+        .tab.active {
+            color: #007bff;
+            border-bottom: 2px solid #007bff;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .example {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #28a745;
+        }
+        .example h4 {
+            margin-top: 0;
+            color: #28a745;
+        }
+        .code {
+            background-color: #f1f3f4;
+            padding: 10px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Platypass AI Gateway</h1>
+        
+        <div id="status" class="status"></div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('simple')">Simple Request</button>
+            <button class="tab" onclick="showTab('dynamic')">Dynamic Configuration</button>
+            <button class="tab" onclick="showTab('examples')">Examples</button>
+        </div>
+        
+        <!-- Simple Request Tab -->
+        <div id="simple" class="tab-content active">
+            <form id="chatForm">
+                <div class="form-group">
+                    <label for="model">Model:</label>
+                    <select id="model" name="model" required>
+                        <option value="">Select a model...</option>
+                        <option value="gpt-4">GPT-4 (OpenAI)</option>
+                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo (OpenAI)</option>
+                        <option value="claude-3-sonnet-20240229">Claude 3 Sonnet (Anthropic)</option>
+                        <option value="claude-3-haiku-20240307">Claude 3 Haiku (Anthropic)</option>
+                        <option value="gemini-pro">Gemini Pro (Google)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="message">Message:</label>
+                    <textarea id="message" name="message" placeholder="Enter your message here..." required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="temperature">Temperature:</label>
+                    <input type="range" id="temperature" name="temperature" min="0" max="2" step="0.1" value="0.7">
+                    <span id="tempValue">0.7</span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="maxTokens">Max Tokens:</label>
+                    <input type="number" id="maxTokens" name="maxTokens" min="1" max="4000" value="100">
+                </div>
+                
+                <button type="submit" id="submitBtn">Send Message</button>
+            </form>
+        </div>
+        
+        <!-- Dynamic Configuration Tab -->
+        <div id="dynamic" class="tab-content">
+            <div class="example">
+                <h4>Dynamic Configuration</h4>
+                <p>This gateway supports dynamic configuration through request headers. You can specify:</p>
+                <ul>
+                    <li><strong>Provider</strong>: Which AI provider to use</li>
+                    <li><strong>API Key</strong>: Your API key for the provider</li>
+                    <li><strong>Base URL</strong>: Custom endpoint (optional)</li>
+                    <li><strong>Provider-specific settings</strong>: Additional configuration</li>
+                </ul>
+            </div>
+            
+            <form id="dynamicForm">
+                <div class="form-group">
+                    <label for="dynamicProvider">Provider:</label>
+                    <select id="dynamicProvider" name="provider" required>
+                        <option value="">Select a provider...</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="anthropic">Anthropic</option>
+                        <option value="google-gemini">Google Gemini</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="apiKey">API Key:</label>
+                    <input type="password" id="apiKey" name="apiKey" placeholder="Enter your API key..." required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="dynamicModel">Model:</label>
+                    <input type="text" id="dynamicModel" name="model" placeholder="e.g., gpt-4, claude-3-sonnet-20240229" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="dynamicMessage">Message:</label>
+                    <textarea id="dynamicMessage" name="message" placeholder="Enter your message here..." required></textarea>
+                </div>
+                
+                <button type="submit" id="dynamicSubmitBtn">Send with Dynamic Config</button>
+            </form>
+        </div>
+        
+        <!-- Examples Tab -->
+        <div id="examples" class="tab-content">
+            <div class="example">
+                <h4>cURL Examples</h4>
+                
+                <h5>1. Simple OpenAI Request</h5>
+                <div class="code">
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "x-portkey-provider: openai" \
+  -H "Authorization: Bearer YOUR_OPENAI_API_KEY" \
+  -d '{
+    "model": "gpt-4",
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'
+                </div>
+                
+                <h5>2. Anthropic Request</h5>
+                <div class="code">
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "x-portkey-provider: anthropic" \
+  -H "Authorization: Bearer YOUR_ANTHROPIC_API_KEY" \
+  -d '{
+    "model": "claude-3-sonnet-20240229",
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'
+                </div>
+                
+                <h5>3. Google Gemini Request</h5>
+                <div class="code">
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "x-portkey-provider: google-gemini" \
+  -H "Authorization: Bearer YOUR_GOOGLE_API_KEY" \
+  -d '{
+    "model": "gemini-pro",
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'
+                </div>
+                
+                <h5>4. JSON Configuration</h5>
+                <div class="code">
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "x-portkey-config: {\"provider\":\"openai\",\"api_key\":\"YOUR_KEY\",\"base_url\":\"https://api.openai.com\"}" \
+  -d '{
+    "model": "gpt-4",
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'
+                </div>
+            </div>
+        </div>
+        
+        <div id="response" class="response" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Update temperature display
+        document.getElementById('temperature').addEventListener('input', function() {
+            document.getElementById('tempValue').textContent = this.value;
+        });
+
+        // Tab functionality
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        // Check API status on load
+        window.addEventListener('load', async function() {
+            try {
+                const response = await fetch('/v1/health');
+                if (response.ok) {
+                    showStatus('AI Gateway is running!', 'success');
+                } else {
+                    showStatus('AI Gateway is not responding', 'error');
+                }
+            } catch (error) {
+                showStatus('Cannot connect to AI Gateway', 'error');
+            }
+        });
+
+        // Handle simple form submission
+        document.getElementById('chatForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const responseDiv = document.getElementById('response');
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending...';
+            responseDiv.style.display = 'none';
+            
+            const formData = new FormData(this);
+            const requestData = {
+                model: formData.get('model'),
+                messages: [
+                    {
+                        role: 'user',
+                        content: formData.get('message')
+                    }
+                ],
+                temperature: parseFloat(formData.get('temperature')),
+                max_tokens: parseInt(formData.get('maxTokens'))
+            };
+            
+            try {
+                const response = await fetch('/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showResponse(data);
+                } else {
+                    const errorData = await response.json();
+                    showError(`Error: ${errorData.message || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Network error: ${error.message}`);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Send Message';
+            }
+        });
+
+        // Handle dynamic form submission
+        document.getElementById('dynamicForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('dynamicSubmitBtn');
+            const responseDiv = document.getElementById('response');
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending...';
+            responseDiv.style.display = 'none';
+            
+            const formData = new FormData(this);
+            const requestData = {
+                model: formData.get('model'),
+                messages: [
+                    {
+                        role: 'user',
+                        content: formData.get('message')
+                    }
+                ],
+                temperature: 0.7,
+                max_tokens: 100
+            };
+            
+            const headers = {
+                'Content-Type': 'application/json',
+                'x-portkey-provider': formData.get('provider'),
+                'Authorization': 'Bearer ' + formData.get('apiKey')
+            };
+            
+            try {
+                const response = await fetch('/v1/chat/completions', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(requestData)
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showResponse(data);
+                } else {
+                    const errorData = await response.json();
+                    showError(`Error: ${errorData.message || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Network error: ${error.message}`);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Send with Dynamic Config';
+            }
+        });
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+
+        function showResponse(data) {
+            const responseDiv = document.getElementById('response');
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'response';
+            
+            if (data.choices && data.choices.length > 0) {
+                const choice = data.choices[0];
+                const content = choice.message.content;
+                const finishReason = choice.finish_reason;
+                
+                responseDiv.innerHTML = `
+                    <h3>Response:</h3>
+                    <p><strong>Content:</strong> ${content}</p>
+                    <p><strong>Finish Reason:</strong> ${finishReason}</p>
+                    <p><strong>Model:</strong> ${data.model}</p>
+                    <p><strong>Usage:</strong> ${data.usage ? `Prompt: ${data.usage.prompt_tokens}, Completion: ${data.usage.completion_tokens}, Total: ${data.usage.total_tokens}` : 'N/A'}</p>
+                `;
+            } else {
+                responseDiv.innerHTML = '<p>No response content available</p>';
+            }
+        }
+
+        function showError(message) {
+            const responseDiv = document.getElementById('response');
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'response error';
+            responseDiv.innerHTML = `<p><strong>Error:</strong> ${message}</p>`;
+        }
+    </script>
+</body>
+</html> 
