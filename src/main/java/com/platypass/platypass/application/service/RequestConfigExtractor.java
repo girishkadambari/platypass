@@ -17,10 +17,11 @@ import java.util.Map;
 @Service
 public class RequestConfigExtractor {
     
-    private static final String POWERED_BY = "portkey";
+    private static final String POWERED_BY = "platypass";
     private static final String CONFIG_HEADER = "x-" + POWERED_BY + "-config";
     private static final String PROVIDER_HEADER = "x-" + POWERED_BY + "-provider";
     private static final String AUTHORIZATION_HEADER = "authorization";
+    private static final String API_KEY_HEADER = "x-api-key";
     
     private final ObjectMapper objectMapper;
     
@@ -91,6 +92,16 @@ public class RequestConfigExtractor {
     private RequestConfig extractFromIndividualHeaders(Map<String, String> headers) {
         String provider = headers.get(PROVIDER_HEADER);
         String apiKey = extractApiKey(headers.get(AUTHORIZATION_HEADER));
+        
+        // If no API key in authorization header, try x-api-key header
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            apiKey = headers.get(API_KEY_HEADER);
+        }
+        
+        // Log extracted values for debugging
+        log.info("Extracted provider: {}", provider);
+        log.info("Extracted API key: {}", apiKey != null ? apiKey.substring(0, Math.min(10, apiKey.length())) + "..." : "null");
+        log.info("Available headers: {}", headers.keySet());
         
         // Extract provider-specific configurations
         Map<String, Object> providerConfig = extractProviderSpecificConfig(headers);

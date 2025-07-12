@@ -48,8 +48,8 @@ public class ChatCompletionService {
         // Extract configuration from headers
         RequestConfig requestConfig = configExtractor.extractConfig(headers);
         
-        if (requestConfig.isValid()) {
-            // Use dynamic provider creation
+        // If we have a provider specified in headers, use dynamic provider creation
+        if (requestConfig.getProvider() != null && !requestConfig.getProvider().trim().isEmpty()) {
             return chatCompletionWithDynamicProvider(request, requestConfig);
         } else {
             // Fall back to registered providers
