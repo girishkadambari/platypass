@@ -1,286 +1,225 @@
-# Platypass AI Gateway
+# Platypass AI Gateway - Java Spring Boot Implementation
 
-A scalable Spring Boot implementation of an AI Gateway with support for multiple AI providers including OpenAI, Anthropic Claude, and Google Gemini. This gateway acts as a proxy that extracts authorization keys and provider information from user requests, similar to the Node.js Portkey gateway.
-
-## Architecture Overview
-
-This implementation follows SOLID principles and clean architecture patterns:
-
-### Domain Layer
-- **Models**: `ChatMessage`, `ChatCompletionRequest`, `ChatCompletionResponse`
-- **Interfaces**: `AIProvider`, `ProviderFactory`
-- **Configuration**: `RequestConfig`, `ProviderConfig`
-
-### Application Layer
-- **Services**: `ChatCompletionService`, `ProviderRegistryService`, `RequestConfigExtractor`
-- Business logic and orchestration
-
-### Infrastructure Layer
-- **Providers**: `OpenAIProvider`, `AnthropicProvider`, `GoogleGeminiProvider`
-- **Configuration**: `ProviderConfiguration`, `ProviderRegistrationService`, `DynamicProviderFactory`
-
-### Presentation Layer
-- **Controllers**: `ChatCompletionController`
-- REST API endpoints
+A Java Spring Boot implementation of an AI Gateway that supports multiple AI providers (OpenAI, Anthropic Claude, Google Gemini) with dynamic provider creation based on request headers.
 
 ## Features
 
-- **Dynamic Provider Creation**: Creates providers on-demand based on request headers
-- **Multi-Provider Support**: OpenAI, Anthropic Claude, Google Gemini
-- **Header-Based Configuration**: Extracts API keys and provider info from request headers
-- **Failover Mechanism**: Automatic fallback to alternative providers
-- **Async Processing**: Non-blocking request handling
-- **Configuration Management**: Environment-based and header-based configuration
-- **Health Monitoring**: Provider availability checks
-- **Scalable Architecture**: Easy to add new providers
+- **Dynamic Provider Creation**: Create AI providers on-demand based on request headers
+- **Multiple AI Providers**: Support for OpenAI, Anthropic Claude, and Google Gemini
+- **Reactive Programming**: Built with Spring WebFlux and WebClient for non-blocking I/O
+- **Clean Architecture**: Follows SOLID principles with domain, application, infrastructure, and presentation layers
+- **Health Checks**: Built-in health monitoring endpoints
+- **No Database Required**: Stateless design that doesn't require a database
 
-## Dynamic Configuration
+## Architecture
 
-The gateway supports dynamic configuration through request headers, allowing users to provide their own API keys and provider information:
+```
+platypass/
+├── domain/           # Domain models and interfaces
+├── application/      # Application services and use cases
+├── infrastructure/   # External integrations and providers
+└── presentation/     # REST controllers and web layer
+```
 
-### Header-Based Configuration
+## Quick Start
 
-#### 1. Simple Provider Selection
+### 1. Build and Run
+
+```bash
+./gradlew bootRun
+```
+
+The application will start on `http://localhost:8080`
+
+### 2. Test the Gateway
+
+#### OpenAI Example
 ```bash
 curl -X POST http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -H "x-portkey-provider: openai" \
-  -H "Authorization: Bearer YOUR_OPENAI_API_KEY" \
+  -H "x-api-key: YOUR_OPENAI_API_KEY" \
+  -H "x-platypass-provider: openai" \
   -d '{
-    "model": "gpt-4",
-    "messages": [{"role": "user", "content": "Hello"}]
+    "model": "gpt-3.5-turbo",
+    "messages": [
+      {"role": "user", "content": "Hello!"}
+    ]
   }'
 ```
 
-#### 2. JSON Configuration
+#### Anthropic Claude Example
 ```bash
 curl -X POST http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -H "x-portkey-config: {\"provider\":\"openai\",\"api_key\":\"YOUR_KEY\",\"base_url\":\"https://api.openai.com\"}" \
+  -H "x-api-key: YOUR_ANTHROPIC_API_KEY" \
+  -H "x-platypass-provider: anthropic" \
   -d '{
-    "model": "gpt-4",
-    "messages": [{"role": "user", "content": "Hello"}]
+    "model": "claude-3-5-sonnet-20241022",
+    "messages": [
+      {"role": "user", "content": "Hello!"}
+    ]
   }'
 ```
 
-#### 3. Provider-Specific Headers
+#### Google Gemini Example
 ```bash
-# OpenAI with organization
 curl -X POST http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -H "x-portkey-provider: openai" \
-  -H "x-portkey-openai-organization: org-123" \
-  -H "Authorization: Bearer YOUR_OPENAI_API_KEY" \
-  -d '{"model": "gpt-4", "messages": [{"role": "user", "content": "Hello"}]}'
-
-# Anthropic with version
-curl -X POST http://localhost:8080/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "x-portkey-provider: anthropic" \
-  -H "x-portkey-anthropic-version: 2023-06-01" \
-  -H "Authorization: Bearer YOUR_ANTHROPIC_API_KEY" \
-  -d '{"model": "claude-3-sonnet-20240229", "messages": [{"role": "user", "content": "Hello"}]}'
+  -H "x-api-key: YOUR_GOOGLE_API_KEY" \
+  -H "x-platypass-provider: google" \
+  -d '{
+    "model": "gemini-pro",
+    "messages": [
+      {"role": "user", "content": "Hello!"}
+    ]
+  }'
 ```
-
-### Supported Headers
-
-| Header | Description | Example |
-|--------|-------------|---------|
-| `x-portkey-provider` | Provider name | `openai`, `anthropic`, `google-gemini` |
-| `Authorization` | API key | `Bearer YOUR_API_KEY` |
-| `x-portkey-config` | JSON configuration | `{"provider":"openai","api_key":"..."}` |
-| `x-portkey-openai-organization` | OpenAI organization | `org-123` |
-| `x-portkey-openai-project` | OpenAI project | `proj-456` |
-| `x-portkey-anthropic-version` | Anthropic API version | `2023-06-01` |
-| `x-portkey-vertex-project-id` | Google Vertex project | `my-project-123` |
 
 ## API Endpoints
 
 ### Chat Completions
-```
-POST /v1/chat/completions
-```
-
-Request Body:
-```json
-{
-  "model": "gpt-4",
-  "messages": [
-    {
-      "role": "user",
-      "content": "Hello, how are you?"
-    }
-  ],
-  "temperature": 0.7,
-  "max_tokens": 100
-}
-```
-
-### Model Information
-```
-GET /v1/models
-GET /v1/models/{model}/supported
-```
+- **POST** `/v1/chat/completions` - Create chat completions
 
 ### Health Check
-```
-GET /v1/health
-```
+- **GET** `/actuator/health` - Application health status
+- **GET** `/v1/health` - Simple health check
+
+### Models
+- **GET** `/v1/models` - Get available models
+- **GET** `/v1/models/{model}/supported` - Check if model is supported
+
+## Request Headers
+
+The gateway uses the following headers for configuration:
+
+| Header | Description | Example |
+|--------|-------------|---------|
+| `x-platypass-provider` | AI provider to use | `openai`, `anthropic`, `google` |
+| `x-api-key` | API key for the provider | `sk-...` |
+| `Authorization` | Alternative way to provide API key | `Bearer sk-...` |
+
+## Supported Providers
+
+### OpenAI
+- **Base URL**: `https://api.openai.com`
+- **Models**: `gpt-4`, `gpt-4-turbo`, `gpt-3.5-turbo`, `gpt-3.5-turbo-16k`
+- **Provider Name**: `openai`
+
+### Anthropic Claude
+- **Base URL**: `https://api.anthropic.com`
+- **Models**: `claude-3-opus-20240229`, `claude-3-sonnet-20240229`, `claude-3-haiku-20240307`
+- **Provider Name**: `anthropic`
+
+### Google Gemini
+- **Base URL**: `https://generativelanguage.googleapis.com`
+- **Models**: `gemini-pro`, `gemini-pro-vision`
+- **Provider Name**: `google` or `google-gemini`
 
 ## Configuration
 
-### Environment Variables (Optional)
-Set these for fallback configuration when headers are not provided:
+### Application Properties
+```properties
+# Server configuration
+server.port=8080
+
+# Logging
+logging.level.com.platypass=INFO
+
+# WebClient timeout
+spring.webflux.client.timeout=30s
+```
+
+### Custom Provider Configuration
+You can also use JSON configuration in headers:
 
 ```bash
-# OpenAI
-export OPENAI_API_KEY=your_openai_api_key
-
-# Anthropic
-export ANTHROPIC_API_KEY=your_anthropic_api_key
-
-# Google Gemini
-export GOOGLE_API_KEY=your_google_api_key
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "x-platypass-config: {\"provider\":\"openai\",\"api_key\":\"sk-...\",\"base_url\":\"https://api.openai.com\"}" \
+  -d '{
+    "model": "gpt-3.5-turbo",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
 ```
 
-Or configure in `application.properties`:
+## Development
 
-```properties
-ai.openai.api-key=your_openai_api_key
-ai.anthropic.api-key=your_anthropic_api_key
-ai.google.api-key=your_google_api_key
+### Project Structure
 ```
-
-## Supported Models
-
-### OpenAI
-- gpt-4
-- gpt-4-turbo
-- gpt-3.5-turbo
-- gpt-3.5-turbo-16k
-
-### Anthropic Claude
-- claude-3-opus-20240229
-- claude-3-sonnet-20240229
-- claude-3-haiku-20240307
-
-### Google Gemini
-- gemini-pro
-- gemini-pro-vision
-
-## Running the Application
-
-1. **Build the project**:
-   ```bash
-   ./gradlew build
-   ```
-
-2. **Run the application**:
-   ```bash
-   ./gradlew bootRun
-   ```
-
-3. **Test with dynamic configuration**:
-   ```bash
-   curl -X POST http://localhost:8080/v1/chat/completions \
-     -H "Content-Type: application/json" \
-     -H "x-portkey-provider: openai" \
-     -H "Authorization: Bearer YOUR_OPENAI_API_KEY" \
-     -d '{
-       "model": "gpt-4",
-       "messages": [
-         {
-           "role": "user",
-           "content": "Hello, how are you?"
-         }
-       ]
-     }'
-   ```
-
-4. **Access the web interface**:
-   Open http://localhost:8080 in your browser
-
-## Design Principles
-
-### SOLID Principles
-- **Single Responsibility**: Each class has one reason to change
-- **Open/Closed**: Open for extension, closed for modification
-- **Liskov Substitution**: Providers can be substituted without breaking functionality
-- **Interface Segregation**: Clients depend only on interfaces they use
-- **Dependency Inversion**: High-level modules don't depend on low-level modules
-
-### Clean Architecture
-- **Domain Layer**: Core business logic and entities
-- **Application Layer**: Use cases and business rules
-- **Infrastructure Layer**: External concerns (APIs, databases)
-- **Presentation Layer**: User interface and controllers
-
-### Design Patterns
-- **Strategy Pattern**: Different AI providers implement the same interface
-- **Factory Pattern**: Dynamic provider creation and configuration
-- **Registry Pattern**: Centralized provider management
-- **Command Pattern**: Async request handling
-
-## Dynamic Provider Creation
-
-The gateway creates providers dynamically based on request headers:
-
-1. **Header Extraction**: `RequestConfigExtractor` extracts configuration from headers
-2. **Provider Creation**: `DynamicProviderFactory` creates providers on-demand
-3. **Request Processing**: `ChatCompletionService` orchestrates the request
-
-### Flow
+src/main/java/com/platypass/platypass/
+├── domain/
+│   ├── model/           # Domain models
+│   └── provider/        # Provider interfaces
+├── application/
+│   └── service/         # Application services
+├── infrastructure/
+│   ├── config/          # Configuration classes
+│   └── provider/        # Provider implementations
+└── presentation/
+    └── controller/      # REST controllers
 ```
-Request Headers → RequestConfigExtractor → DynamicProviderFactory → AIProvider → Response
-```
-
-## Extending the Gateway
 
 ### Adding a New Provider
 
 1. **Create Provider Implementation**:
-   ```java
-   @Component
-   public class NewProvider implements AIProvider {
-       // Implementation
-   }
-   ```
+```java
+@Component
+public class NewProvider implements AIProvider {
+    // Implementation
+}
+```
 
 2. **Add to DynamicProviderFactory**:
-   ```java
-   case "new-provider":
-       return new NewProvider(providerConfig, restTemplate, objectMapper);
-   ```
+```java
+case "new-provider":
+    return new NewProvider(providerConfig, webClient, objectMapper);
+```
 
-3. **Add Default Configuration**:
-   ```java
-   case "new-provider":
-       return "https://api.newprovider.com";
-   ```
+3. **Update RequestConfigExtractor**:
+```java
+case "new-provider":
+    return "https://api.newprovider.com";
+```
 
-## Error Handling
+## Comparison with Node.js Implementation
 
-The gateway includes comprehensive error handling:
-- **Provider Failures**: Automatic fallback to alternative providers
-- **Invalid Requests**: Proper HTTP status codes and error messages
-- **Configuration Errors**: Graceful degradation when providers are unavailable
-- **Network Issues**: Timeout and retry mechanisms
-- **Header Parsing**: Fallback to registered providers when headers are invalid
+| Feature | Node.js (Portkey) | Java (Platypass) |
+|---------|-------------------|-------------------|
+| Header Prefix | `x-portkey-` | `x-platypass-` |
+| Architecture | Monolithic | Clean Architecture |
+| Programming Model | Async/Await | Reactive (WebFlux) |
+| Provider Selection | Dynamic | Dynamic |
+| API Key Support | Multiple formats | Multiple formats |
 
-## Monitoring and Logging
+## Performance
 
-- **Structured Logging**: All operations are logged with appropriate levels
-- **Provider Health**: Regular availability checks
-- **Request Tracking**: Request/response correlation
-- **Performance Metrics**: Response times and throughput
-- **Dynamic Provider Logging**: Logs when providers are created dynamically
+- **Non-blocking I/O**: Uses WebClient for reactive HTTP calls
+- **Connection Pooling**: Efficient connection management
+- **Timeout Handling**: Configurable timeouts for all providers
+- **Error Handling**: Comprehensive error handling with fallbacks
 
-## Future Enhancements
+## Monitoring
 
-- **Caching**: Response caching for improved performance
-- **Rate Limiting**: Per-provider rate limiting
-- **Authentication**: API key validation and security
-- **Streaming**: Support for streaming responses
-- **Metrics**: Prometheus metrics integration
-- **Circuit Breaker**: Resilience patterns for provider failures
-- **Plugin System**: Dynamic provider loading 
+- **Health Checks**: Built-in Spring Boot Actuator health endpoints
+- **Logging**: Structured logging with SLF4J
+- **Metrics**: Spring Boot Actuator metrics (if enabled)
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Provider not found**: Ensure the provider name is correct in headers
+2. **API key issues**: Check that the API key is valid and has proper permissions
+3. **Network issues**: Verify internet connectivity and firewall settings
+4. **Timeout errors**: Increase timeout values in configuration
+
+### Debug Mode
+
+Enable debug logging:
+```properties
+logging.level.com.platypass=DEBUG
+```
+
+## License
+
+This project is licensed under the MIT License. 
